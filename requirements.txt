@@ -1,0 +1,4 @@
+pydantic-settings
+python-dotenv
+fire
+supabase
