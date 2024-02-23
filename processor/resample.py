@@ -5,7 +5,7 @@ import rasterio
 from rasterio.enums import Resampling
 
 
-def resample(input_file: str, output_file: str, scale_factor: float = 1 / 10, method: Resampling = Resampling.bilinear):
+def resample(input_file: str, output_file: str, scale_factor: float = 1 / 10, method: Resampling = Resampling.bilinear, driver: str = 'GTiff'):
     """
     Resample the input_file to the given scale_factor and save the output to output_file.
 
@@ -21,17 +21,32 @@ def resample(input_file: str, output_file: str, scale_factor: float = 1 / 10, me
             resampling=method
         )
 
-        # scale the affine transform
-        transform = src.transform * src.transform.scale(
-            (src.width / data.shape[-1]),
-            (src.height / data.shape[-2])
-        )
+        # check if the source is already EPSG:4326
+        if src.crs.to_epsg() != 4326:
+            # reproject the data to EPSG:4326
+            data, transform = rasterio.warp.reproject(
+                data,
+                src_crs=src.crs,
+                src_transform=src.transform,
+                dst_crs='EPSG:4326',
+                dst_transform=src.transform * src.transform.scale(
+                    (src.width / data.shape[-1]),
+                    (src.height / data.shape[-2])
+                ),
+                resampling=method
+            )
+        else:
+            # scale the affine transform
+            transform = src.transform * src.transform.scale(
+                (src.width / data.shape[-1]),
+                (src.height / data.shape[-2])
+            )
 
         # save to output file
         with rasterio.open(
             output_file,
             'w',
-            driver='GTiff',
+            driver=driver,
             height=data.shape[1],
             width=data.shape[2],
             count=src.count,
