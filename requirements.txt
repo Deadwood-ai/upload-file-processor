@@ -3,3 +3,4 @@ python-dotenv
 fire
 supabase
 rasterio
+paramiko
