@@ -2,74 +2,17 @@
 This is the actual file handler that manages the updating of the metadata files
 
 """
-from typing import List
-from datetime import datetime
 import time
-
-import rasterio
+from tempfile import NamedTemporaryFile
 
 from .utils.settings import settings
-from .utils.supabase_client import use_client, login
+from .metadata import get_metadata
+from .auth import supabase_client
 from .utils.metadata_models import FileUploadMetadata, StatusEnum
 from .resample import resample
+from .files import put_file, fetch_file, archive_file
+from .logger import logger
 
-__ACCESS_TOKEN = None
-__REFRESH_TOKEN = None
-__ISSUED_AT = None
-
-
-def authenticate_processor():
-    # use the global TOKENS
-    global __ACCESS_TOKEN
-    global __REFRESH_TOKEN
-    global __ISSUED_AT
-    
-    # if there is no access token
-    if __ACCESS_TOKEN is None or __REFRESH_TOKEN is None:    
-        # login to the supabase backend to retrieve an access token
-        auth = login(settings.processor_username, settings.processor_password)
-
-        # upadate
-        __ACCESS_TOKEN = auth.session.access_token
-        __REFRESH_TOKEN = auth.session.refresh_token
-        __ISSUED_AT = datetime.now()
-
-    # check if we need to refresh the token
-    elif (datetime.now() - __ISSUED_AT).total_seconds() > 60 * 45:  # 45 minutes
-        with use_client(__ACCESS_TOKEN) as client:
-            auth = client.auth.refresh_session(__REFRESH_TOKEN)
-
-            # update the tokens
-            __ACCESS_TOKEN = auth.session.access_token
-            __REFRESH_TOKEN = auth.session.refresh_token
-            __ISSUED_AT = datetime.now()
-    
-    else:
-        # there is nothing to do
-        pass
-
-
-def list_pending_uuids() -> List[str]:
-    # we can load these without authentication
-    with use_client(None) as client:
-        response = client.table(settings.metadata_table).select("uuid").eq("status", StatusEnum.pending.value).execute()
-    
-    # extract the uudis from the retunred data
-    uuids = [row['uuid'] for row in response.data]
-    return uuids
-
-
-def get_metadata(uuid: str) -> FileUploadMetadata:
-    # we need authenticated access
-    authenticate_processor()
-
-    # use the client to load the data
-    with use_client(__ACCESS_TOKEN) as client:
-        # load the metadata row
-        response = client.table(settings.metadata_table).select("*").eq("uuid", uuid).single().execute()
-        metadata = FileUploadMetadata(**response.data)
-    
-    return metadata
 
 
 def preprocess_file(uuid: str) -> FileUploadMetadata:
@@ -77,34 +20,45 @@ def preprocess_file(uuid: str) -> FileUploadMetadata:
     metadata = get_metadata(uuid=uuid)
 
     # update the status to processing
-    with use_client(__ACCESS_TOKEN) as client:
+    with supabase_client() as client:
         client.table(settings.metadata_table).update({"status": StatusEnum.processing.value}).eq("uuid", uuid).execute()
         metadata.status = StatusEnum.processing.value
     
-    # start the resample method
+    # START - resampling
     t1 = time.time()
     try:
-        # first build the output path
-        output_path = settings.processed_path / metadata.file_id
-        resample(metadata.target_path, str(output_path))
+        # get the file
+        with NamedTemporaryFile() as target_path:
+            with fetch_file(metadata) as src_file:
+                # resample the file
+                bbox = resample(src_file, target_path.name)
+
+                # update the metadata
+                metadata.bbox = bbox
+            
+            # put the file to the right location
+            put_file(metadata, target_path.name)
+        
     except Exception as e:
+        logger.error(str(e))
         # update the status to errored
         metadata.status = StatusEnum.errored
         
     finally:
         t2 = time.time()
         metadata.compress_time = t2 - t1
-
-    # try to open the processed file
-    if not metadata.status == StatusEnum.errored:
-        try:
-            with rasterio.open(str(output_path)) as src:
-                metadata.bbox = src.bounds
-        except Exception as e:
-            metadata.status = StatusEnum.errored
+    # FINISH - resampling
+        
+    # START - copy the file
+    try:
+        archive_file(metadata)
+    except Exception as e:
+        logger.error(str(e))
+    
 
     # update the metadata
-    with use_client(__ACCESS_TOKEN) as client:
+    with supabase_client() as client:
         client.table(settings.metadata_table).update(metadata.model_dump()).eq("uuid", uuid).execute()
+    logger.info(f"Finished processing {uuid} in {metadata.compress_time} seconds.")
     
     return metadata
