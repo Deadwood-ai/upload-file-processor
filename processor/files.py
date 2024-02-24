@@ -8,13 +8,15 @@ connections, like S3, later.
 """
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from contextlib import contextmanager
+import shutil
 
-from paramiko import SSHClient, SFTPClient
+from fabric import Connection
 
 from .utils.settings import settings
 from .utils.metadata_models import FileUploadMetadata
 
-
+@contextmanager
 def fetch_file(metadata: FileUploadMetadata) -> str:
     """
     Check if the file is locally available, then return the path to the file.
@@ -26,12 +28,14 @@ def fetch_file(metadata: FileUploadMetadata) -> str:
         return metadata.target_path
     
     # otherwise we need to ssh SFTP the file form the server
-    with SSHClient().connect(settings.ssh_host, username=settings.ssh_user, password=settings.ssh_password):
-        with SFTPClient() as sftp:
-            with NamedTemporaryFile(delete=False) as tmp:
-                sftp.get(metadata.target_path, tmp.name)
+    with Connection(f"{settings.ssh_user}@{settings.ssh_host}") as c:
+        with NamedTemporaryFile(delete=False) as tmp:
+            c.get(metadata.target_path, tmp.name)
 
-    return tmp.name
+    try:
+        yield tmp.name
+    finally:
+        shutil.rmtree(tmp.name)
 
 
 def put_file(metadata: FileUploadMetadata, local_path: Path) -> str:
@@ -40,5 +44,39 @@ def put_file(metadata: FileUploadMetadata, local_path: Path) -> str:
     path from the metadata is local to the processor, then copy locally.
     Otherwise put the file via SFTP.
     """
-    # check if the file is locally available
-    pass
+    # create the needed target path
+    target_path = Path(settings.processed_path) / metadata.file_id
+
+    # derive the assusmed path, if we are local
+    if Path(settings.target_path).exists():
+        # we are local
+        shutil.copy(local_path, str(target_path))
+
+    # otherwise we need to ssh SFTP the file from the server
+    else:
+        with Connection(f"{settings.ssh_user}@{settings.ssh_host}") as c:
+            c.put(local_path, str(target_path))
+
+    return str(target_path)
+
+
+def archive_file(metadata: FileUploadMetadata) -> str:
+    """
+    Copy the file in the specified archive location and remove from the
+    raw upload location.
+
+    """
+    # build the archive path
+    archive_path = settings.archive_path / metadata.file_id
+
+    # check if the target path exists locally
+    if Path(metadata.target_path).exists():
+        # we are local
+        shutil.copy(metadata.target_path, str(archive_path))
+    
+    else:
+        with Connection(f"{settings.ssh_user}@{settings.ssh_host}") as c:
+            c.run(f"mv {metadata.target_path} {archive_path}")
+    
+    return str(archive_path)
+            
