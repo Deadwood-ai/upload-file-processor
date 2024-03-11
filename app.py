@@ -60,7 +60,7 @@ def run(
     :param proxy_headers: use proxy headers
     :param reload: reload the server on file changes
     """
-    uvicorn.run("storage.app:app", host=host, port=port, root_path=root_path, proxy_headers=proxy_headers, reload=reload)
+    uvicorn.run("app:app", host=host, port=port, root_path=root_path, proxy_headers=proxy_headers, reload=reload)
 
 
 if __name__ == "__main__":
