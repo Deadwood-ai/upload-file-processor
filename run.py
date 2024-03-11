@@ -1,1 +1,3 @@
-print("This tool's run.py is not yet implemented.")
+from processor.handler import dispatch_pending_files
+
+dispatch_pending_files()
