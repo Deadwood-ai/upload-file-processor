@@ -1,0 +1,25 @@
+MAP
+  NAME "Deadtrees Database"
+  SIZE 800 600
+  EXTENT -180 -90 180 90
+  UNITS dd
+
+  WEB
+    METADATA
+      "wms_title" "Deadtrees WMS server"
+      "wms_srs" "EPSG:4326"
+      "wms_enable_request" "*"
+    END
+  END
+
+  PROJECTION
+    "init=epsg:4326"
+  END
+
+  # Add more layers here using the LAYER directive
+
+  # Publish all layers added later by a WMS server
+  # PROCESSING "APPLY_GLOBALS=1"
+  # PROCESSING "FORCE_LAYERS_UPDATE=1"
+
+END

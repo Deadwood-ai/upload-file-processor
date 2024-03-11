@@ -1,0 +1,36 @@
+version: '3'
+services:
+  mapserver:
+    image: pdok/mapserver
+    ports:
+      - 8080:80
+    environment:
+      MS_MAPFILE: /srv/data/MAINFILE.map
+      SERVICE_TYPE: WMS
+    volumes:
+      - ./data/mapfiles:/srv/data
+      - ./data/processed:/data/processed
+
+  processor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      STORAGE_LOCAL: true
+      MAPSERVER_LOCAL: true
+      BASE_DIR: /data
+
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_KEY: ${SUPABASE_KEY}
+      PROCESSOR_PASSWORD: ${PROCESSOR_PASSWORD}
+      METADATA_TABLE: upload_files_dev
+
+      STORAGE_SSH_USER: mirko
+      STORAGE_SSH_HOST: data.deadtrees.earth
+      STORAGE_SSH_PASSWORD: ${STORAGE_SSH_PASSWORD}
+
+      MAPSERVER_SSH_USER: mirko
+      MAPSERVER_SSH_HOST: data.deadtrees.earth
+      MAPSERVER_SSH_PASSWORD: ${MAPSERVER_SSH_PASSWORD}
+    volumes:
+      - ./data:/data

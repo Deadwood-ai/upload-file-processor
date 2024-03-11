@@ -4,3 +4,7 @@ fire
 supabase
 rasterio
 fabric
+mappyfile
+fastapi
+uvicorn
+fire
