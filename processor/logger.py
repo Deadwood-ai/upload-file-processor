@@ -47,7 +47,7 @@ console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.DEBUG)
 
 supabase_handler = SupabaseHandler()
-supabase_handler.setLevel(logging.WARNING)
+supabase_handler.setLevel(logging.INFO) 
 
 
 # create a formatter for the console handler
