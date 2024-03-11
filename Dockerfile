@@ -16,9 +16,10 @@ RUN pip install --upgrade pip && \
 RUN mkdir /app
 COPY ./processor /app/processor
 COPY ./run.py /app/run.py
+COPY ./app.py /app/app.py
 
 # set the working directory
 WORKDIR /app
 
 # run the application
-CMD ["python", "run.py"]
+CMD ["python", "app.py"]
