@@ -7,7 +7,7 @@ from pydantic import BaseModel
 import uvicorn
 
 from processor.metadata import list_pending_uuids
-from processor.handler import dispatch_pending_files, preprocess_file
+from processor.handler import preprocess_file
 from processor.utils.settings import settings
 from processor.logger import logger
 from processor import __version__
@@ -60,8 +60,13 @@ async def dispatch(uuid: str = 'all', body: SupabaseWebhookPayload | None = None
 
     # dispatch all 
     if uuid == 'all':
-        dispatch_pending_files(wait=False)
-        logger.info("Dispatching preprocessor over /dispatch by API using uuid: 'all'")
+        uuids = list_pending_uuids()
+        
+        # dispatch them all
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            for uuid in uuids:
+                executor.submit(preprocess_file, uuid)
+        logger.info(f"Dispatching {len(uuids)} preprocessor threads over /dispatch by API using uuid: 'all'")
     else:
         ThreadPoolExecutor().submit(preprocess_file, uuid)
         logger.info(f"Dispatching preprocessor by invoking /dispatch/{uuid}")
