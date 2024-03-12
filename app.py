@@ -45,18 +45,18 @@ def get_pending() -> list[str]:
 
 @app.post("/dispatch")
 @app.post("/dispatch/{uuid}")
-async def dispatch(uuid: str = 'all', record: Optional[dict] = None, **body: Optional[dict]):
+async def dispatch(uuid: str = 'all', body: SupabaseWebhookPayload | None = None):
     """
     Dispatch a file for preprocessing.
     The API will not wait for the process to be finished.
     """
     # handle supabase webhook payloads
-    if record:
-        if 'uuid' not in record:
-            logger.error(f"Received a Supabase webhhok payload without a uuid: {record}; body: {body}")
+    if body is not None and body.record is not None:
+        if 'uuid' not in body.record:
+            logger.error(f"Received a Supabase webhhok payload without a uuid: {body}")
         else:
-            uuid = record['uuid']
-            logger.info("Dispatching preprocessor over /dispatch by Supabase webhook using payload: {record}")
+            uuid = body.record['uuid']
+            logger.info(f"Dispatching preprocessor over /dispatch by Supabase webhook using payload: {body.record}")
 
     # dispatch all 
     if uuid == 'all':
