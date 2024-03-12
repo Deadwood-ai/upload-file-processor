@@ -42,7 +42,7 @@ def get_pending() -> list[str]:
     return list_pending_uuids()
 
 @app.get("/dispatch")
-@app.get("/dispatch/{uuid}")
+@app.post("/dispatch/{uuid}")
 async def dispatch(uuid: str = 'all', record: Optional[dict] = None, **body: dict):
     """
     Dispatch a file for preprocessing.
@@ -51,7 +51,7 @@ async def dispatch(uuid: str = 'all', record: Optional[dict] = None, **body: dic
     # handle supabase webhook payloads
     if record:
         if 'uuid' not in record:
-            logger.error(f"Received a Supabase webhhok payload without a uuid: {record}")
+            logger.error(f"Received a Supabase webhhok payload without a uuid: {record}; body: {body}")
         else:
             uuid = record['uuid']
             logger.info("Dispatching preprocessor over /dispatch by Supabase webhook using payload: {record}")
@@ -63,6 +63,8 @@ async def dispatch(uuid: str = 'all', record: Optional[dict] = None, **body: dic
     else:
         ThreadPoolExecutor().submit(preprocess_file, uuid)
         logger.info(f"Dispatching preprocessor by invoking /dispatch/{uuid}")
+    
+    return {"status": "dispatched"}
 
 
 def run(
