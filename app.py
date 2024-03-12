@@ -10,11 +10,13 @@ from processor.metadata import list_pending_uuids
 from processor.handler import dispatch_pending_files, preprocess_file
 from processor.utils.settings import settings
 from processor.logger import logger
+from processor import __version__
 
 
 app = FastAPI(
     title="Deadwood AI upload preprocessor",
     description="This is a simplistic API around two preprocessing entrypoints: `/dispatch/all` and `/dispatch/{uuid}`",
+    version=__version__,
 )
 
 # Add CORS middleware
@@ -41,9 +43,9 @@ def get_pending() -> list[str]:
     """
     return list_pending_uuids()
 
-@app.get("/dispatch")
+@app.post("/dispatch")
 @app.post("/dispatch/{uuid}")
-async def dispatch(uuid: str = 'all', record: Optional[dict] = None, **body: dict):
+async def dispatch(uuid: str = 'all', record: Optional[dict] = None, **body: Optional[dict]):
     """
     Dispatch a file for preprocessing.
     The API will not wait for the process to be finished.
