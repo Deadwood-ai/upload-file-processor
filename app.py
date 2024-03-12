@@ -1,11 +1,15 @@
+from typing import Literal, Optional
+from concurrent.futures import ThreadPoolExecutor
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import uvicorn
-from concurrent.futures import ThreadPoolExecutor
 
 from processor.metadata import list_pending_uuids
 from processor.handler import dispatch_pending_files, preprocess_file
 from processor.utils.settings import settings
+from processor.logger import logger
 
 
 app = FastAPI(
@@ -21,6 +25,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# define a number of data models
+class SupabaseWebhookPayload(BaseModel):
+    type: Literal['INSERT']
+    table: str
+    schema: str
+    record: dict
+    old_record: Optional[dict] = None
+
+
 @app.get("/files/pending")
 def get_pending() -> list[str]:
     """
@@ -30,18 +43,26 @@ def get_pending() -> list[str]:
 
 @app.get("/dispatch")
 @app.get("/dispatch/{uuid}")
-async def dispatch(uuid: str = 'all'):
+async def dispatch(uuid: str = 'all', record: Optional[dict] = None, **body: dict):
     """
     Dispatch a file for preprocessing.
     The API will not wait for the process to be finished.
     """
+    # handle supabase webhook payloads
+    if record:
+        if 'uuid' not in record:
+            logger.error(f"Received a Supabase webhhok payload without a uuid: {record}")
+        else:
+            uuid = record['uuid']
+            logger.info("Dispatching preprocessor over /dispatch by Supabase webhook using payload: {record}")
+
     # dispatch all 
     if uuid == 'all':
         dispatch_pending_files(wait=False)
-        return {"message": ""}
+        logger.info("Dispatching preprocessor over /dispatch by API using uuid: 'all'")
     else:
         ThreadPoolExecutor().submit(preprocess_file, uuid)
-        return {"message": f"dispatching {uuid}"}
+        logger.info(f"Dispatching preprocessor by invoking /dispatch/{uuid}")
 
 
 def run(
