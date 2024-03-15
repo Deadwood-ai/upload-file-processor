@@ -7,7 +7,7 @@ MAP
   WEB
     METADATA
       "wms_title" "Deadtrees WMS server"
-      "wms_srs" "EPSG:4326"
+      "wms_srs" "EPSG:4326 EPSG:3857"
       "wms_enable_request" "*"
     END
   END

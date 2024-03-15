@@ -19,7 +19,8 @@ def add_wms_layer(metadata: FileUploadMetadata):
         "name": metadata.file_id,
         "status": "on",
         "data": metadata.processed_path,
-        "processing": ["BANDS=1,2,3"],
+        "processing": ["BANDS=1,2,3", "SCALE=AUTO"],
+        "offsite": [0, 0, 0],
         "metadata": {
             "wms_title": metadata.file_id,
         },
