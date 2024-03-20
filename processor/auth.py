@@ -13,6 +13,13 @@ __ISSUED_AT = None
 __USER_ID = None
 
 
+def direct_authenticate_processor() -> str:
+    # always create a new token?
+    auth = login(settings.processor_username, settings.processor_password)
+
+    return auth.session.access_token
+
+
 def authenticate_processor():
     # use the global TOKENS
     global __ACCESS_TOKEN
@@ -49,10 +56,14 @@ def authenticate_processor():
 @contextmanager
 def supabase_client() -> Generator[Client, None, None]:
     # authenticate the processor
-    authenticate_processor()
+    # TODO: debug one day why this is not working
+    # authenticate_processor()
+
+    access_token = direct_authenticate_processor()
 
     # create a supabase client
-    with use_client(__ACCESS_TOKEN) as client:
+    #with use_client(__ACCESS_TOKEN) as client:
+    with use_client(access_token) as client:
         yield client
 
 
