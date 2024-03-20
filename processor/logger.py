@@ -1,7 +1,7 @@
 from typing import Optional
 import logging
 
-from .auth import supabase_client, get_user_id
+from .auth import supabase_client
 from .utils.metadata_models import FileUploadMetadata
 
 # create a custom supabase handler
@@ -31,9 +31,7 @@ class SupabaseHandler(logging.Handler):
         # connect to the database and log
         with supabase_client() as client:
             # get the user
-            user_id = get_user_id()
-            log.update(user_id=user_id)
-
+            log.update(user_id=client.user_id)
             client.table("logs").insert(log).execute()
 
 # create the logger

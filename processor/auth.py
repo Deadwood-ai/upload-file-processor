@@ -3,9 +3,11 @@ from contextlib import contextmanager
 from datetime import datetime
 
 from supabase import Client
+from gotrue import AuthResponse
 
 from .utils.settings import settings
 from .utils.supabase_client import use_client, login
+
 
 __ACCESS_TOKEN = None
 __REFRESH_TOKEN = None
@@ -13,11 +15,15 @@ __ISSUED_AT = None
 __USER_ID = None
 
 
-def direct_authenticate_processor() -> str:
+class AuthorizedClient(Client):
+    user_id: str = None
+
+
+def direct_authenticate_processor() -> AuthResponse:
     # always create a new token?
     auth = login(settings.processor_username, settings.processor_password)
 
-    return auth.session.access_token
+    return auth
 
 
 def authenticate_processor():
@@ -54,16 +60,17 @@ def authenticate_processor():
 
 
 @contextmanager
-def supabase_client() -> Generator[Client, None, None]:
+def supabase_client() -> Generator[AuthorizedClient, None, None]:
     # authenticate the processor
     # TODO: debug one day why this is not working
     # authenticate_processor()
 
-    access_token = direct_authenticate_processor()
+    auth = direct_authenticate_processor()
 
     # create a supabase client
     #with use_client(__ACCESS_TOKEN) as client:
-    with use_client(access_token) as client:
+    with use_client(auth.session.access_token) as client:
+        client.user_id = auth.user.id
         yield client
 
 
