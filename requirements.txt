@@ -8,3 +8,4 @@ mappyfile
 fastapi
 uvicorn
 fire
+pyproj
