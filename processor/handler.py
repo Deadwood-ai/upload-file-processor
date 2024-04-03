@@ -10,6 +10,7 @@ from .utils.settings import settings
 from .metadata import get_metadata, list_pending_uuids
 from .auth import supabase_client
 from .utils.metadata_models import FileUploadMetadata, StatusEnum
+from .utils.settings import settings
 from .resample import resample
 from .mapserver import create_wms_source
 from .files import put_processed_raster, fetch_raw_raster, archive_raster
@@ -50,7 +51,12 @@ def preprocess_file(uuid: str) -> FileUploadMetadata:
         with NamedTemporaryFile() as target_path:
             with fetch_raw_raster(metadata) as src_file:
                 # resample the file
-                bbox = resample(src_file, target_path.name)
+                bbox = resample(
+                    src_file,
+                    target_path.name,
+                    compress=settings.processor_compression,
+                    jpeg_quality=settings.compression_quality
+                )
 
                 # update the metadata
                 metadata.bbox = bbox
