@@ -96,9 +96,9 @@ def resample(
 
         # check if a compression is specified
         if compress is not None:
-            write_options["compress"] = compress.upper()
+            write_options["compress"] = compress.value.upper()
             if compress.lower() == 'jpeg':
-                write_options[jpeg_quality] = jpeg_quality if jpeg_quality is not None else 90
+                write_options["jpeg_quality"] = jpeg_quality if jpeg_quality is not None else 90
         
         # write the file
         with rasterio.open(output_file, "w", **write_options) as dst:
