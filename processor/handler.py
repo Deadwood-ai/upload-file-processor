@@ -10,7 +10,6 @@ from .utils.settings import settings
 from .metadata import get_metadata, list_pending_uuids
 from .auth import supabase_client
 from .utils.metadata_models import FileUploadMetadata, StatusEnum
-from .utils.settings import settings
 from .resample import resample
 from .mapserver import create_wms_source
 from .files import put_processed_raster, fetch_raw_raster, archive_raster
