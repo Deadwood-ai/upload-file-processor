@@ -46,6 +46,10 @@ def resample(
         if isinstance(scale_factor, str):
             if scale_factor.lower() == 'auto':
                 scale_factor = auto_scale_factor(src)
+
+                # TODO: not sure how we want to handle this case:
+                if scale_factor > 1:
+                    scale_factor = 1.0
             else:
                 raise ValueError("Invalid value for scale_factor. Must be a float or 'auto'")
 
