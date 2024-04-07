@@ -1,10 +1,11 @@
 from typing import Literal, Optional
 from concurrent.futures import ThreadPoolExecutor
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
+import prometheus_client
 
 from processor.metadata import list_pending_uuids
 from processor.handler import preprocess_file
@@ -72,6 +73,14 @@ async def dispatch(uuid: str = 'all', body: SupabaseWebhookPayload | None = None
         logger.info(f"Dispatching preprocessor by invoking /dispatch/{uuid}")
     
     return {"status": "dispatched"}
+
+
+@app.get("/metrics")
+def get_metrics():
+    return Response(
+        content=prometheus_client.generate_latest(),
+        media_type="text/plain"
+    )
 
 
 def run(

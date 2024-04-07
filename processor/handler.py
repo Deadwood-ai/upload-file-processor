@@ -6,6 +6,8 @@ import time
 from tempfile import NamedTemporaryFile
 from concurrent.futures import ThreadPoolExecutor
 
+import prometheus_client
+
 from .utils.settings import settings
 from .metadata import get_metadata, list_pending_uuids
 from .auth import supabase_client
@@ -14,6 +16,10 @@ from .resample import resample
 from .mapserver import create_wms_source
 from .files import put_processed_raster, fetch_raw_raster, archive_raster
 from .logger import logger
+
+
+# create a prometheus histogram for the processing time
+processing_time = prometheus_client.Histogram('processor_processing_time', 'Time taken to process a file', unit='seconds')
 
 
 def dispatch_pending_files(wait: bool = True):
@@ -73,6 +79,8 @@ def preprocess_file(uuid: str) -> FileUploadMetadata:
     finally:
         t2 = time.time()
         metadata.compress_time = t2 - t1
+
+        processing_time.observe(t2 - t1)
     # FINISH - resampling
         
     # START - copy the file
