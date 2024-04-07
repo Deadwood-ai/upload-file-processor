@@ -61,7 +61,8 @@ def preprocess_file(uuid: str) -> FileUploadMetadata:
                     target_path.name,
                     scale_factor=settings.scale_factor,
                     compress=settings.processor_compression,
-                    jpeg_quality=settings.compression_quality
+                    jpeg_quality=settings.compression_quality,
+                    driver=settings.processor_image_driver
                 )
 
                 # update the metadata
